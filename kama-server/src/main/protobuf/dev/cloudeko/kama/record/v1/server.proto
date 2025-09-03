@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package cloudeko.kama.record.v1;
+
+import "google/protobuf/empty.proto";
+
+import "dev/cloudeko/kama/record/v1/resources.proto";
+
+// ----------------------------------------------------------------------------
+// Record Server API
+// ----------------------------------------------------------------------------
+// This service exposes CRUD operations for Record resources.
+// Records belong to a parent Collection.
+
+option java_multiple_files = true;
+option java_outer_classname = "RecordServerProto";
+option java_package = "dev.cloudeko.kama.record.v1";
+option csharp_namespace = "Cloudeko.Kama.Record.V1";
+option go_package = "cloudeko.dev/go/kama/record/v1/recordserverpb;recordserverpb";
+option php_namespace = "Cloudeko\\Kama\\Record\\V1";
+option ruby_package = "Cloudeko::Kama::Record::V1";
+
+service RecordService {
+  // Creates a record under a parent collection.
+  rpc CreateRecord(CreateRecordRequest) returns (Record) {}
+
+  // Retrieves a record by name.
+  rpc GetRecord(GetRecordRequest) returns (Record) {}
+
+  // Lists records within a collection.
+  rpc ListRecords(ListRecordsRequest) returns (ListRecordsResponse) {}
+
+  // Updates a record.
+  rpc UpdateRecord(UpdateRecordRequest) returns (Record) {}
+
+  // Deletes a record by name.
+  rpc DeleteRecord(DeleteRecordRequest) returns (google.protobuf.Empty) {}
+}
+
+message CreateRecordRequest {
+  // Required. Parent collection resource name: collections/{collection}
+  string parent = 1;
+  // Required. The record to create. OUTPUT_ONLY fields are ignored.
+  Record record = 2;
+}
+
+message GetRecordRequest {
+  // Required. Resource name: collections/{collection}/records/{record}
+  string name = 1;
+}
+
+message ListRecordsRequest {
+  // Required. Parent collection: collections/{collection}
+  string parent = 1;
+  // Optional filter string; server-defined semantics.
+  string filter = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListRecordsResponse {
+  repeated Record records = 1;
+  string next_page_token = 2;
+}
+
+message UpdateRecordRequest {
+  // Required. The record with updated fields. The name identifies the target.
+  Record record = 1;
+  // Optional simple comma-separated field mask.
+  string update_mask = 2;
+}
+
+message DeleteRecordRequest {
+  // Required. Resource name: collections/{collection}/records/{record}
+  string name = 1;
+}
