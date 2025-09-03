@@ -44,6 +44,22 @@
                             <goal>generate</goal>
                         </goals>
                     </execution>
+                    <execution>
+                        <id>compile-typescript</id>
+                        <configuration>
+                            <javaEnabled>false</javaEnabled>
+                            <outputDirectory>${project.basedir}/../kama-platform/src/main/frontend/app/client</outputDirectory>
+                            <binaryUrlPlugins>
+                                <binaryUrlPlugin>
+                                    <url>file:${project.basedir}/../kama-platform/src/main/frontend/node_modules/.bin/protoc-gen-es</url>
+                                    <options>target=ts</options>
+                                </binaryUrlPlugin>
+                            </binaryUrlPlugins>
+                        </configuration>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>
