@@ -1,65 +1,239 @@
 package dev.cloudeko.kama.server.impl;
 
+import com.google.protobuf.Descriptors;
 import dev.cloudeko.kama.collection.v1.Collection;
+import dev.cloudeko.kama.collection.v1.CollectionServerProto;
 import dev.cloudeko.kama.server.CollectionService;
+import dev.cloudeko.kama.server.DatabaseOptions;
+import dev.cloudeko.kama.server.exception.ResourceAlreadyExists;
+import dev.cloudeko.kama.server.handler.CreateCollectionV1Handler;
 import dev.cloudeko.kama.server.util.ResourceUtil;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.grpc.common.ServiceName;
+import io.vertx.grpc.server.GrpcServer;
+import io.vertx.grpc.server.Service;
+import io.vertx.jdbcclient.JDBCConnectOptions;
+import io.vertx.jdbcclient.JDBCPool;
+import io.vertx.sqlclient.PoolOptions;
 import io.vertx.sqlclient.Row;
-import io.vertx.sqlclient.Tuple;
+import io.vertx.sqlclient.SqlClient;
 import io.vertx.sqlclient.templates.RowMapper;
+import io.vertx.sqlclient.templates.SqlTemplate;
 import io.vertx.sqlclient.templates.TupleMapper;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 
-public record CollectionServiceImpl(Vertx vertx) implements CollectionService {
+public class CollectionServiceImpl implements CollectionService, Service {
+
+    private static final ServiceName V1_SERVICE_NAME = ServiceName.create("cloudeko.kama.collection.v1.CollectionServer");
+    private static final Descriptors.ServiceDescriptor V1_SERVICE_DESCRIPTOR = CollectionServerProto.getDescriptor().findServiceByName("CollectionServer");
+
+    private final Vertx vertx;
+    private final SqlClient client;
+    private final DatabaseOptions options;
+
+    public CollectionServiceImpl(Vertx vertx, DatabaseOptions options) {
+        this.vertx = vertx;
+        this.options = options;
+
+        JDBCConnectOptions connect = new JDBCConnectOptions().setJdbcUrl(options.getUrl()).setUser(options.getUsername()).setPassword(options.getPassword());
+        PoolOptions opts = new PoolOptions().setMaxSize(5);
+        this.client = JDBCPool.pool(vertx, connect, opts);
+    }
+
+    @Override
+    public ServiceName name() {
+        return V1_SERVICE_NAME;
+    }
+
+    @Override
+    public Descriptors.ServiceDescriptor descriptor() {
+        return V1_SERVICE_DESCRIPTOR;
+    }
+
+    @Override
+    public void bind(GrpcServer server) {
+        server.callHandler(CreateCollectionV1Handler.SERVICE_METHOD, new CreateCollectionV1Handler(this));
+        server.callHandler(dev.cloudeko.kama.server.handler.GetCollectionV1Handler.SERVICE_METHOD, new dev.cloudeko.kama.server.handler.GetCollectionV1Handler(this));
+        server.callHandler(dev.cloudeko.kama.server.handler.ListCollectionsV1Handler.SERVICE_METHOD, new dev.cloudeko.kama.server.handler.ListCollectionsV1Handler(this));
+        server.callHandler(dev.cloudeko.kama.server.handler.UpdateCollectionV1Handler.SERVICE_METHOD, new dev.cloudeko.kama.server.handler.UpdateCollectionV1Handler(this));
+        server.callHandler(dev.cloudeko.kama.server.handler.DeleteCollectionV1Handler.SERVICE_METHOD, new dev.cloudeko.kama.server.handler.DeleteCollectionV1Handler(this));
+    }
+
+    private static String safeIdent(String s) {
+        // Use only letters, digits, underscore; fallback to UUID if empty
+        String out = s == null ? "" : "\"" + s.replaceAll("[^A-Za-z0-9_]", "_") + "\"";
+        if (out.isBlank()) {
+            out = "t_" + UUID.randomUUID().toString().replace("-", "");
+        }
+        return out;
+    }
+
+    private static String tableNameFor(Collection c) {
+        // Prefer using the UUID to guarantee uniqueness
+        return "\"c_" + c.getId().replace("-", "") + "\"";
+    }
+
+    private static String sqlTypeFor(dev.cloudeko.kama.collection.v1.CollectionField f) {
+        return switch (f.getTypeCase()) {
+            case STRING_TYPE, REFERENCE_TYPE -> "VARCHAR(1024)";
+            case INTEGER_TYPE -> "BIGINT";
+            case BOOL_TYPE -> "BOOLEAN";
+            case DOUBLE_TYPE -> "DOUBLE";
+            case TIMESTAMP_TYPE -> "TIMESTAMP";
+            case BYTES_TYPE -> "BLOB";
+            case ARRAY_TYPE, MAP_TYPE, TYPE_NOT_SET -> "CLOB"; // store as JSON text initially
+        };
+    }
+
+    private String buildCreateTableDdl(Collection c) {
+        StringBuilder sb = new StringBuilder();
+        String tbl = tableNameFor(c);
+        sb.append("CREATE TABLE IF NOT EXISTS ").append(tbl).append(" (");
+        sb.append("\"id\" VARCHAR(36) PRIMARY KEY");
+        // For now always include a create/update timestamp
+        sb.append(", \"create_time\" TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+        sb.append(", \"update_time\" TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+        // Add columns per field
+        var fieldsMap = c.getFieldsMap();
+        for (Map.Entry<String, dev.cloudeko.kama.collection.v1.CollectionField> e : fieldsMap.entrySet()) {
+            String col = safeIdent(e.getKey());
+            String type = sqlTypeFor(e.getValue());
+            boolean notNull = e.getValue().getRequired();
+            sb.append(", ").append(col).append(" ").append(type);
+            if (notNull)
+                sb.append(" NOT NULL");
+        }
+        sb.append(")");
+        return sb.toString();
+    }
 
     @Override
     public Future<JsonObject> createCollection(JsonObject collection) {
-        Collection resource = ResourceUtil.decode(collection);
-        if (resource == null) {
+        Collection incoming = ResourceUtil.decode(collection);
+        if (incoming == null) {
             return Future.failedFuture("Invalid collection");
         }
 
         UUID id = UUID.randomUUID();
-        resource = Collection.newBuilder().setId(id.toString()).setName("/collections/" + id).build();
+        // Server-populated fields: id, name
+        Collection toStore = Collection.newBuilder(incoming)
+                .setId(id.toString())
+                .setName("collections/" + id)
+                .build();
+        JsonObject doc = ResourceUtil.encode(toStore);
 
-        return null;
+        // 1) Insert into metadata
+        String sql = "INSERT INTO \"collections_meta\" (\"id\", \"name\", \"display_name\", \"schema_json\") VALUES (#{id}, #{name}, #{display_name}, #{schema})";
+        Map<String, Object> params = new HashMap<>();
+        params.put("id", toStore.getId());
+        params.put("name", toStore.getName());
+        params.put("display_name", toStore.getDisplayName());
+        params.put("schema", doc.encode());
+
+        return SqlTemplate.forUpdate(client, sql)
+                .execute(params)
+                .recover(err -> {
+                    String message = String.valueOf(err.getMessage());
+                    if (message != null && message.toLowerCase(Locale.ROOT).contains("unique")) {
+                        return Future.failedFuture(new ResourceAlreadyExists("Collection already exists"));
+                    }
+                    return Future.failedFuture(err);
+                })
+                .compose(v -> {
+                    // 2) Create physical table for the collection
+                    String ddl = buildCreateTableDdl(toStore);
+                    return client.query(ddl).execute().map(doc);
+                });
     }
 
     @Override
     public Future<JsonObject> updateCollection(JsonObject collection) {
-        return null;
+        Collection incoming = ResourceUtil.decode(collection);
+        if (incoming == null || incoming.getName().isBlank()) {
+            return Future.failedFuture("Invalid collection");
+        }
+        // Get current to preserve id and name
+        return getCollection(incoming.getName()).compose(existingJson -> {
+            Collection existing = ResourceUtil.decode(existingJson);
+            Collection toStore = Collection.newBuilder(incoming)
+                    .setId(existing.getId())
+                    .setName(existing.getName())
+                    .build();
+            JsonObject doc = ResourceUtil.encode(toStore);
+            String sql = "UPDATE \"collections_meta\" SET \"display_name\" = #{display_name}, \"schema_json\" = #{schema}, \"update_time\" = CURRENT_TIMESTAMP WHERE \"name\" = #{name}";
+            Map<String, Object> params = Map.of(
+                    "display_name", toStore.getDisplayName(),
+                    "schema", doc.encode(),
+                    "name", toStore.getName()
+            );
+
+            return SqlTemplate.forUpdate(client, sql)
+                    .execute(params)
+                    .compose(r -> r.rowCount() == 0 ? Future.failedFuture("Not found") : Future.succeededFuture(doc));
+        });
     }
 
     @Override
-    public Future<Void> deleteCollection(String collection) {
-        return null;
+    public Future<Void> deleteCollection(String name) {
+        if (name == null || name.isBlank()) {
+            return Future.failedFuture("Invalid name");
+        }
+        return getCollection(name)
+                .compose(json -> {
+                    Collection c = ResourceUtil.decode(json);
+                    String drop = "DROP TABLE IF EXISTS " + tableNameFor(c);
+                    return client.query(drop).execute().mapEmpty().recover(err -> Future.succeededFuture()); // ignore drop issues
+                })
+                .compose(v -> SqlTemplate.forUpdate(client, "DELETE FROM \"collections_meta\" WHERE \"name\" = #{name}").execute(Map.of("name", name)))
+                .compose(r -> r.rowCount() == 0 ? Future.failedFuture("Not found") : Future.succeededFuture());
     }
 
     @Override
-    public Future<JsonObject> getCollection(String collection) {
-        return null;
+    public Future<JsonObject> getCollection(String name) {
+        if (name == null || name.isBlank()) {
+            return Future.failedFuture("Invalid name");
+        }
+        String sql = "SELECT \"schema_json\" FROM \"collections_meta\" WHERE \"name\" = #{name}";
+        return SqlTemplate.forQuery(client, sql).execute(Map.of("name", name))
+                .compose(rs -> {
+                    Iterator<Row> it = rs.iterator();
+                    if (!it.hasNext()) {
+                        return Future.failedFuture("Not found");
+                    }
+                    Row row = it.next();
+                    return Future.succeededFuture(new JsonObject(row.getString("schema_json")));
+                });
     }
 
     @Override
     public Future<List<JsonObject>> listCollections() {
-        return null;
+        String sql = "SELECT \"schema_json\" FROM \"collections_meta\" ORDER BY \"create_time\"";
+        return SqlTemplate.forQuery(client, sql).execute(Collections.emptyMap())
+                .map(rowSet -> {
+                    List<JsonObject> list = new ArrayList<>();
+                    for (Row row : rowSet) {
+                        list.add(new JsonObject(row.getString("schema_json")));
+                    }
+                    return list;
+                });
     }
 
+    // TupleMapper for completeness (not strictly needed since we use Map params). RowMapper for proto if needed elsewhere.
     private static final class CollectionMapper implements RowMapper<Collection>, TupleMapper<Collection> {
-
         @Override
         public Collection map(Row row) {
-            return null;
+            String doc = row.getString(row.getColumnIndex("document"));
+            return ResourceUtil.decode(new JsonObject(doc));
         }
 
         @Override
-        public Tuple map(Function<Integer, String> function, int i, Collection collection) {
-            return null;
+        public io.vertx.sqlclient.Tuple map(Function<Integer, String> function, int size, Collection collection) {
+            JsonObject json = ResourceUtil.encode(collection);
+            return io.vertx.sqlclient.Tuple.of(collection.getId(), collection.getName(), json.encode());
         }
     }
 }

@@ -1,34 +1,34 @@
 package dev.cloudeko.kama.server.handler;
 
-import dev.cloudeko.kama.collection.v1.Collection;
-import dev.cloudeko.kama.collection.v1.GetCollectionRequest;
-import dev.cloudeko.kama.server.CollectionService;
+import dev.cloudeko.kama.record.v1.CreateRecordRequest;
+import dev.cloudeko.kama.record.v1.Record;
+import dev.cloudeko.kama.server.RecordService;
 import dev.cloudeko.kama.server.exception.GrpcException;
 import dev.cloudeko.kama.server.util.ResourceUtil;
 import io.vertx.grpc.common.*;
 import io.vertx.grpc.server.GrpcServerRequest;
 
-public class GetCollectionV1Handler extends BaseCollectionHandler<GetCollectionRequest, Collection> {
+public class CreateRecordV1Handler extends BaseRecordHandler<CreateRecordRequest, Record> {
 
-    public static final ServiceMethod<GetCollectionRequest, Collection> SERVICE_METHOD = ServiceMethod.server(
-            ServiceName.create("cloudeko.kama.collection.v1"),
-            "GetCollection",
+    public static final ServiceMethod<CreateRecordRequest, Record> SERVICE_METHOD = ServiceMethod.server(
+            ServiceName.create("cloudeko.kama.record.v1"),
+            "CreateRecord",
             GrpcMessageEncoder.encoder(),
-            GrpcMessageDecoder.decoder(GetCollectionRequest.newBuilder()));
+            GrpcMessageDecoder.decoder(CreateRecordRequest.newBuilder()));
 
-    public GetCollectionV1Handler(CollectionService collectionService) {
-        super(collectionService);
+    public CreateRecordV1Handler(RecordService recordService) {
+        super(recordService);
     }
 
     @Override
-    public void handle(GrpcServerRequest<GetCollectionRequest, Collection> request) {
-        request.handler(req -> collectionService.getCollection(req.getName())
+    public void handle(GrpcServerRequest<CreateRecordRequest, Record> request) {
+        request.handler(req -> recordService.createRecord(req.getParent(), ResourceUtil.encode(req.getRecord()))
                 .onSuccess(response -> {
                     if (response == null) {
                         request.response().status(GrpcStatus.INTERNAL).end();
                         return;
                     }
-                    request.response().end(ResourceUtil.decode(response));
+                    request.response().end(ResourceUtil.decodeRecord(response));
                 })
                 .onFailure(err -> {
                     if (err instanceof GrpcException) {

@@ -204,3 +204,22 @@ message Rule {
     Type type = 1;
   }
 }
+
+//TODO: Edit and document this
+message ValidationRules {
+  // String validations
+  int32 min_length = 1;
+  int32 max_length = 2;
+  string pattern = 3; // Regex pattern
+
+  // Numeric validations
+  double min_value = 4;
+  double max_value = 5;
+
+  // Array validations
+  int32 min_items = 6;
+  int32 max_items = 7;
+
+  // Reference validations
+  string reference_collection = 8;
+}

@@ -16,7 +16,7 @@ public class CreateCollectionV1Handler extends BaseCollectionHandler<CreateColle
             GrpcMessageEncoder.encoder(),
             GrpcMessageDecoder.decoder(CreateCollectionRequest.newBuilder()));
 
-    protected CreateCollectionV1Handler(CollectionService collectionService) {
+    public CreateCollectionV1Handler(CollectionService collectionService) {
         super(collectionService);
     }
 

@@ -1,6 +1,5 @@
 package dev.cloudeko.kama.server;
 
-import dev.cloudeko.kama.collection.v1.Collection;
 import dev.cloudeko.kama.server.impl.CollectionServiceImpl;
 import io.vertx.codegen.annotations.ProxyGen;
 import io.vertx.codegen.annotations.VertxGen;
@@ -14,8 +13,8 @@ import java.util.List;
 @ProxyGen
 public interface CollectionService {
 
-    static CollectionService create(Vertx vertx) {
-        return new CollectionServiceImpl(vertx);
+    static CollectionService create(Vertx vertx, DatabaseOptions options) {
+        return new CollectionServiceImpl(vertx, options);
     }
 
     static CollectionService createProxy(Vertx vertx, String address) {
