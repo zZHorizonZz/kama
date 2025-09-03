@@ -1,0 +1,45 @@
+{
+  "name": "frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "react-router build",
+    "dev": "react-router dev",
+    "start": "react-router-serve ./build/server/index.js",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint . --unsafe --write",
+    "format": "biome format .",
+    "format:fix": "biome format . --write",
+    "client:generate": "npx buf generate",
+    "typecheck": "react-router typegen && tsc"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.6.0",
+    "@connectrpc/connect": "^2.0.2",
+    "@connectrpc/connect-web": "^2.0.2",
+    "@react-router/node": "^7.5.3",
+    "@react-router/serve": "^7.5.3",
+    "google-protobuf": "^3.21.4",
+    "google-proto-files": "^5.0.1",
+    "grpc-web": "^1.5.0",
+    "isbot": "^5.1.27",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router": "^7.5.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@bufbuild/buf": "^1.55.1",
+    "@bufbuild/protoc-gen-es": "^2.6.0",
+    "@react-router/dev": "^7.5.3",
+    "@tailwindcss/vite": "^4.1.4",
+    "@total-typescript/tsconfig": "^1.0.4",
+    "@types/node": "^20",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "tailwindcss": "^4.1.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.3",
+    "vite-tsconfig-paths": "^5.1.4"
+  }
+}
