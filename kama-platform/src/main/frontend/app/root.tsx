@@ -3,6 +3,7 @@ import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration }
 import type { Route } from "./+types/root";
 import type { PropsWithChildren } from "react";
 import { AuthProvider } from "~/contexts/auth-context";
+import { ThemeProvider } from "~/contexts/theme-context";
 
 import "./tailwind.css";
 import "react-material-web/styles";
@@ -40,10 +41,17 @@ export function Layout({ children }: PropsWithChildren) {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Outlet />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Outlet />
+      </AuthProvider>
+    </ThemeProvider>
   );
+}
+
+// HydrateFallback is rendered while the client loader is running
+export function HydrateFallback() {
+  return <div>Loading...</div>;
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

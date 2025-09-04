@@ -1,7 +1,9 @@
 package dev.cloudeko.kama.server.impl;
 
 import com.google.protobuf.Descriptors;
+import com.google.protobuf.Timestamp;
 import dev.cloudeko.kama.collection.v1.Collection;
+import dev.cloudeko.kama.collection.v1.CollectionField;
 import dev.cloudeko.kama.collection.v1.CollectionServerProto;
 import dev.cloudeko.kama.server.CollectionService;
 import dev.cloudeko.kama.server.DatabaseOptions;
@@ -30,6 +32,8 @@ public class CollectionServiceImpl implements CollectionService, Service {
 
     private static final ServiceName V1_SERVICE_NAME = ServiceName.create("cloudeko.kama.collection.v1.CollectionServer");
     private static final Descriptors.ServiceDescriptor V1_SERVICE_DESCRIPTOR = CollectionServerProto.getDescriptor().findServiceByName("CollectionServer");
+
+    private static final Set<String> SYSTEM_FIELDS = Set.of("id", "create_time", "update_time");
 
     private final Vertx vertx;
     private final SqlClient client;
@@ -77,8 +81,9 @@ public class CollectionServiceImpl implements CollectionService, Service {
         return "\"c_" + c.getId().replace("-", "") + "\"";
     }
 
-    private static String sqlTypeFor(dev.cloudeko.kama.collection.v1.CollectionField f) {
+    private static String sqlTypeFor(CollectionField f) {
         return switch (f.getTypeCase()) {
+            case IDENTIFIER_TYPE -> "VARCHAR(36) PRIMARY KEY";
             case STRING_TYPE, REFERENCE_TYPE -> "VARCHAR(1024)";
             case INTEGER_TYPE -> "BIGINT";
             case BOOL_TYPE -> "BOOLEAN";
@@ -93,20 +98,23 @@ public class CollectionServiceImpl implements CollectionService, Service {
         StringBuilder sb = new StringBuilder();
         String tbl = tableNameFor(c);
         sb.append("CREATE TABLE IF NOT EXISTS ").append(tbl).append(" (");
-        sb.append("\"id\" VARCHAR(36) PRIMARY KEY");
-        // For now always include a create/update timestamp
-        sb.append(", \"create_time\" TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
-        sb.append(", \"update_time\" TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
-        // Add columns per field
-        var fieldsMap = c.getFieldsMap();
-        for (Map.Entry<String, dev.cloudeko.kama.collection.v1.CollectionField> e : fieldsMap.entrySet()) {
+
+        boolean first = true;
+
+        for (Map.Entry<String, CollectionField> e : c.getFieldsMap().entrySet()) {
             String col = safeIdent(e.getKey());
             String type = sqlTypeFor(e.getValue());
             boolean notNull = e.getValue().getRequired();
-            sb.append(", ").append(col).append(" ").append(type);
-            if (notNull)
+            if (!first) {
+                sb.append(", ");
+            }
+            first = false;
+            sb.append(col).append(" ").append(type);
+            if (notNull) {
                 sb.append(" NOT NULL");
+            }
         }
+
         sb.append(")");
         return sb.toString();
     }
@@ -120,11 +128,30 @@ public class CollectionServiceImpl implements CollectionService, Service {
 
         UUID id = UUID.randomUUID();
         // Server-populated fields: id, name
-        Collection toStore = Collection.newBuilder(incoming)
+        Collection.Builder toStore = Collection.newBuilder(incoming)
                 .setId(id.toString())
-                .setName("collections/" + id)
-                .build();
-        JsonObject doc = ResourceUtil.encode(toStore);
+                .setName("collections/" + id);
+
+        // Add columns per field
+        Map<String, CollectionField> fieldsMap = new LinkedHashMap<>(); // Use LinkedHashMap to maintain insertion order
+
+        // Add id first
+        fieldsMap.put("id", CollectionField.newBuilder().setIdentifierType("UUID").setRequired(true).setSystem(true).build());
+
+        // Add all non-system fields from original map
+        toStore.getFieldsMap().forEach((key, value) -> {
+            if (!value.getSystem() && !SYSTEM_FIELDS.contains(key)) {
+                fieldsMap.put(key, value);
+            }
+        });
+
+        // Add timestamp fields last
+        fieldsMap.put("create_time", CollectionField.newBuilder().setTimestampType(Timestamp.newBuilder()).setSystem(true).build());
+        fieldsMap.put("update_time", CollectionField.newBuilder().setTimestampType(Timestamp.newBuilder()).setSystem(true).build());
+
+        toStore.clearFields().putAllFields(fieldsMap);
+
+        JsonObject doc = ResourceUtil.encode(toStore.build());
 
         // 1) Insert into metadata
         String sql = "INSERT INTO \"collections_meta\" (\"id\", \"name\", \"display_name\", \"schema_json\") VALUES (#{id}, #{name}, #{display_name}, #{schema})";
@@ -145,7 +172,7 @@ public class CollectionServiceImpl implements CollectionService, Service {
                 })
                 .compose(v -> {
                     // 2) Create physical table for the collection
-                    String ddl = buildCreateTableDdl(toStore);
+                    String ddl = buildCreateTableDdl(toStore.build());
                     return client.query(ddl).execute().map(doc);
                 });
     }
@@ -159,11 +186,31 @@ public class CollectionServiceImpl implements CollectionService, Service {
         // Get current to preserve id and name
         return getCollection(incoming.getName()).compose(existingJson -> {
             Collection existing = ResourceUtil.decode(existingJson);
-            Collection toStore = Collection.newBuilder(incoming)
+            Collection.Builder toStore = Collection.newBuilder(incoming)
                     .setId(existing.getId())
-                    .setName(existing.getName())
-                    .build();
-            JsonObject doc = ResourceUtil.encode(toStore);
+                    .setName(existing.getName());
+
+            // Add columns per field
+            Map<String, CollectionField> fieldsMap = new LinkedHashMap<>(); // Use LinkedHashMap to maintain insertion order
+
+            // Add id first
+            fieldsMap.put("id", CollectionField.newBuilder().setIdentifierType("UUID").setRequired(true).setSystem(true).build());
+
+            // Add all non-system fields from original map
+            toStore.getFieldsMap().forEach((key, value) -> {
+                if (!value.getSystem() && !SYSTEM_FIELDS.contains(key)) {
+                    fieldsMap.put(key, value);
+                }
+            });
+
+            // Add timestamp fields last
+            fieldsMap.put("create_time", CollectionField.newBuilder().setTimestampType(Timestamp.newBuilder()).setSystem(true).build());
+            fieldsMap.put("update_time", CollectionField.newBuilder().setTimestampType(Timestamp.newBuilder()).setSystem(true).build());
+
+            toStore.clearFields().putAllFields(fieldsMap);
+
+            JsonObject doc = ResourceUtil.encode(toStore.build());
+
             String sql = "UPDATE \"collections_meta\" SET \"display_name\" = #{display_name}, \"schema_json\" = #{schema}, \"update_time\" = CURRENT_TIMESTAMP WHERE \"name\" = #{name}";
             Map<String, Object> params = Map.of(
                     "display_name", toStore.getDisplayName(),

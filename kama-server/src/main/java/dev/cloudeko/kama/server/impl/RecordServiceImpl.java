@@ -96,7 +96,7 @@ public class RecordServiceImpl implements RecordService, Service {
 
             // Validate required fields present
             for (Map.Entry<String, dev.cloudeko.kama.collection.v1.CollectionField> e : schema.entrySet()) {
-                if (e.getValue().getRequired()) {
+                if (e.getValue().getRequired() && !e.getValue().getSystem()) {
                     if (!inputJson.containsKey(e.getKey()) || inputJson.getValue(e.getKey()) == null) {
                         return Future.failedFuture("Missing required field: " + e.getKey());
                     }

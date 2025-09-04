@@ -117,6 +117,11 @@ message CollectionField {
   // required = true, clients must provide a non-null value of the declared type.
   bool required = 1;
 
+  // Whether this field is managed by the system. System fields are reserved for
+  // internal use and typically have special validation or behavior rules. Clients
+  // cannot modify system fields trough api.
+  bool system = 2;
+
   // Declares the data type of this field. Exactly one type must be specified.
   // Notes:
   // - string_type: Arbitrary UTF-8 text. Consider using reference_type if the
@@ -131,26 +136,28 @@ message CollectionField {
   // - array_type: Repeating values. See ArrayType for nesting semantics.
   // - map_type: Keyed values. See MapType for nesting semantics.
   oneof type {
+    // UUID base id field.
+    string identifier_type = 10;
     // Free-form UTF-8 text field.
-    string string_type = 10;
+    string string_type = 11;
     // 64-bit signed integer field.
-    int64 integer_type = 11;
+    int64 integer_type = 12;
     // Boolean field.
-    bool bool_type = 12;
+    bool bool_type = 13;
     // 64-bit IEEE-754 floating point field.
-    double double_type = 13;
+    double double_type = 14;
     // Timestamp (UTC). Clients should send/receive RFC 3339 format in JSON.
-    google.protobuf.Timestamp timestamp_type = 14;
+    google.protobuf.Timestamp timestamp_type = 15;
     // A string intended to reference another resource (foreign key). Use
     // consistent naming conventions for referenced resource types.
-    string reference_type = 15;
+    string reference_type = 16;
     // Opaque binary payload. JSON transports will base64-encode this value.
-    bytes bytes_type = 16;
+    bytes bytes_type = 17;
     // An array (list) of values. See ArrayType.values element typing rules.
-    ArrayType array_type = 17;
+    ArrayType array_type = 18;
     // A map (object/dictionary) of keyed fields. See MapType.values typing
     // rules.
-    MapType map_type = 18;
+    MapType map_type = 19;
   }
 }
 
