@@ -55,7 +55,7 @@
                             <outputDirectory>${project.basedir}/../kama-platform/src/main/frontend/app/client</outputDirectory>
                             <binaryUrlPlugins>
                                 <binaryUrlPlugin>
-                                    <url>file:///Experiment/protoc-gen-es-win.exe</url>
+                                    <url>${protoc.gen.grpc.web.url}</url>
                                     <options>target=ts</options>
                                 </binaryUrlPlugin>
                             </binaryUrlPlugins>

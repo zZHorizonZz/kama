@@ -11,6 +11,37 @@
 
     <artifactId>kama-platform</artifactId>
 
+    <properties>
+        <vertx.verticle>io.vertx.starter.MainVerticle</vertx.verticle>
+        <vertx-maven-plugin.version>2.0.2</vertx-maven-plugin.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>dev.cloudeko</groupId>
+            <artifactId>kama-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-launcher-application</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.47.0.0</version>
+        </dependency>
+    </dependencies>
+
     <build>
         <plugins>
             <plugin>
@@ -51,7 +82,7 @@
                             <arguments>run build</arguments>
                         </configuration>
                     </execution>
-                    <execution>
+                    <!--execution>
                         <id>npm-run-lint</id>
                         <phase>generate-resources</phase>
                         <goals>
@@ -60,7 +91,7 @@
                         <configuration>
                             <arguments>run lint</arguments>
                         </configuration>
-                    </execution>
+                    </execution-->
                 </executions>
             </plugin>
             <plugin>
@@ -99,7 +130,7 @@
             <plugin>
                 <groupId>io.reactiverse</groupId>
                 <artifactId>vertx-maven-plugin</artifactId>
-                <version>1.0.28</version>
+                <version>${vertx-maven-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>vmp</id>

@@ -10,7 +10,7 @@ import io.vertx.grpc.server.GrpcServerRequest;
 public class DeleteCollectionV1Handler extends BaseCollectionHandler<DeleteCollectionRequest, Empty> {
 
     public static final ServiceMethod<DeleteCollectionRequest, Empty> SERVICE_METHOD = ServiceMethod.server(
-            ServiceName.create("cloudeko.kama.collection.v1"),
+            ServiceName.create("cloudeko.kama.collection.v1.CollectionService"),
             "DeleteCollection",
             GrpcMessageEncoder.encoder(),
             GrpcMessageDecoder.decoder(DeleteCollectionRequest.newBuilder()));

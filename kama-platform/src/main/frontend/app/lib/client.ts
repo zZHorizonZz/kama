@@ -1,16 +1,13 @@
-import {AuthService} from "~/client/pocketrion/auth/v1/service_pb";
-import {UserService} from "~/client/pocketrion/user/v1/service_pb";
-import {Health} from "~/client/grpc/health/v1/health_pb";
+import { CollectionService } from "~/client/dev/cloudeko/kama/collection/v1/server_pb";
+import { RecordService } from "~/client/dev/cloudeko/kama/record/v1/server_pb";
 
-import {type Client as ConnectClient, createClient, type Interceptor, type Transport} from "@connectrpc/connect";
-import {createGrpcWebTransport} from "@connectrpc/connect-web";
+import { type Client as ConnectClient, createClient, type Interceptor, type Transport } from "@connectrpc/connect";
+import { createGrpcWebTransport } from "@connectrpc/connect-web";
 
 interface Client {
-    getAuthService(): ConnectClient<typeof AuthService>;
+  getCollectionService(): ConnectClient<typeof CollectionService>;
 
-    getUserService(): ConnectClient<typeof UserService>;
-
-    getHealthService(): ConnectClient<typeof Health>;
+  getRecordService(): ConnectClient<typeof RecordService>;
 }
 
 // Utility function to decode JWT token payload
@@ -94,7 +91,7 @@ async function refreshAccessToken(): Promise<string | null> {
 }*/
 
 const authorization: Interceptor = (next) => async (req) => {
-    /*// Skip authorization for auth service endpoints (except refresh token)
+  /*// Skip authorization for auth service endpoints (except refresh token)
     if (req.url.startsWith("/pocketrion.auth.v1.AuthService") && 
         !req.url.includes("RefreshToken")) {
         return await next(req);
@@ -119,34 +116,28 @@ const authorization: Interceptor = (next) => async (req) => {
         req.header.set("authorization", `Bearer ${token}`);
     }*/
 
-    return await next(req);
+  return await next(req);
 };
 
 class ClientImpl implements Client {
-    private readonly transport: Transport;
+  private readonly transport: Transport;
 
-    private readonly authService: ConnectClient<typeof AuthService>;
-    private readonly userService: ConnectClient<typeof UserService>;
-    private readonly healthService: ConnectClient<typeof Health>;
+  private readonly collectionService: ConnectClient<typeof CollectionService>;
+  private readonly recordService: ConnectClient<typeof RecordService>;
 
-    constructor(hostname: string) {
-        this.transport = createGrpcWebTransport({baseUrl: hostname, interceptors: [authorization]});
-        this.authService = createClient(AuthService, this.transport);
-        this.userService = createClient(UserService, this.transport);
-        this.healthService = createClient(Health, this.transport);
-    }
+  constructor(hostname: string) {
+    this.transport = createGrpcWebTransport({ baseUrl: hostname, interceptors: [authorization] });
+    this.collectionService = createClient(CollectionService, this.transport);
+    this.recordService = createClient(RecordService, this.transport);
+  }
 
-    getAuthService(): ConnectClient<typeof AuthService> {
-        return this.authService;
-    }
+  getCollectionService(): ConnectClient<typeof CollectionService> {
+    return this.collectionService;
+  }
 
-    getUserService(): ConnectClient<typeof UserService> {
-        return this.userService;
-    }
-
-    getHealthService(): ConnectClient<typeof Health> {
-        return this.healthService;
-    }
+  getRecordService(): ConnectClient<typeof RecordService> {
+    return this.recordService;
+  }
 }
 
 export const client = new ClientImpl("http://localhost:9000");

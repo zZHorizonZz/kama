@@ -10,7 +10,7 @@ import io.vertx.grpc.server.GrpcServerRequest;
 public class DeleteRecordV1Handler extends BaseRecordHandler<DeleteRecordRequest, Empty> {
 
     public static final ServiceMethod<DeleteRecordRequest, Empty> SERVICE_METHOD = ServiceMethod.server(
-            ServiceName.create("cloudeko.kama.record.v1"),
+            ServiceName.create("cloudeko.kama.record.v1.RecordService"),
             "DeleteRecord",
             GrpcMessageEncoder.encoder(),
             GrpcMessageDecoder.decoder(DeleteRecordRequest.newBuilder()));

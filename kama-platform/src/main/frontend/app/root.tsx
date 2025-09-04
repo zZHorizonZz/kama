@@ -1,9 +1,11 @@
 import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
 import type { Route } from "./+types/root";
-import "./app.css";
 import type { PropsWithChildren } from "react";
 import { AuthProvider } from "~/contexts/auth-context";
+
+import "./tailwind.css";
+import "react-material-web/styles";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },

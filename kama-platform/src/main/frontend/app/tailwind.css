@@ -1,0 +1,5 @@
+@layer theme, base, components, utilities;
+
+@import "./tailwind.theme.css" layer(theme);
+@import "./tailwind.base.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities);

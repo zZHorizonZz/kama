@@ -38,15 +38,24 @@ public class MigrationVerticle extends AbstractVerticle {
   }
 
   private FluentConfiguration convertToFluentConfiguration(DatabaseOptions options) {
-    return new FluentConfiguration()
+    FluentConfiguration config = new FluentConfiguration()
       .dataSource(
         options.getUrl(),
         options.getUsername(),
         options.getPassword()
-      )
-      .createSchemas(true)
-      .schemas(options.getSchema())
-      .defaultSchema(options.getSchema());
+      );
+    
+    // SQLite doesn't support schemas, so don't configure them for SQLite
+    if (!options.getUrl().startsWith("jdbc:sqlite:")) {
+      config
+        .createSchemas(true)
+        .schemas(options.getSchema())
+        .defaultSchema(options.getSchema());
+    } else {
+      config.createSchemas(false);
+    }
+    
+    return config;
   }
 }
 

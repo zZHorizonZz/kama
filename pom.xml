@@ -56,4 +56,39 @@
         <module>kama-platform</module>
     </modules>
 
+    <profiles>
+        <profile>
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <protoc.gen.grpc.web.url>https://github.com/zZHorizonZz/kama/raw/refs/heads/master/.bin/protoc-gen-es-win.exe</protoc.gen.grpc.web.url>
+            </properties>
+        </profile>
+        <profile>
+            <id>unix</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+            </activation>
+            <properties>
+                <protoc.gen.grpc.web.url>https://github.com/zZHorizonZz/kama/raw/refs/heads/master/.bin/protoc-gen-es-linux</protoc.gen.grpc.web.url>
+            </properties>
+        </profile>
+        <profile>
+            <id>mac</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <protoc.gen.grpc.web.url>https://github.com/zZHorizonZz/kama/raw/refs/heads/master/.bin/protoc-gen-es-macos</protoc.gen.grpc.web.url>
+            </properties>
+        </profile>
+    </profiles>
 </project>

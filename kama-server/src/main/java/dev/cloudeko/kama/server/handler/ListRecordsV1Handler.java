@@ -15,7 +15,7 @@ import java.util.List;
 public class ListRecordsV1Handler extends BaseRecordHandler<ListRecordsRequest, ListRecordsResponse> {
 
     public static final ServiceMethod<ListRecordsRequest, ListRecordsResponse> SERVICE_METHOD = ServiceMethod.server(
-            ServiceName.create("cloudeko.kama.record.v1"),
+            ServiceName.create("cloudeko.kama.record.v1.RecordService"),
             "ListRecords",
             GrpcMessageEncoder.encoder(),
             GrpcMessageDecoder.decoder(ListRecordsRequest.newBuilder()));

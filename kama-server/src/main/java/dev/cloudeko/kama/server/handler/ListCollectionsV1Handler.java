@@ -16,7 +16,7 @@ import java.util.List;
 public class ListCollectionsV1Handler extends BaseCollectionHandler<ListCollectionsRequest, ListCollectionsResponse> {
 
     public static final ServiceMethod<ListCollectionsRequest, ListCollectionsResponse> SERVICE_METHOD = ServiceMethod.server(
-            ServiceName.create("cloudeko.kama.collection.v1"),
+            ServiceName.create("cloudeko.kama.collection.v1.CollectionService"),
             "ListCollections",
             GrpcMessageEncoder.encoder(),
             GrpcMessageDecoder.decoder(ListCollectionsRequest.newBuilder()));
@@ -27,6 +27,7 @@ public class ListCollectionsV1Handler extends BaseCollectionHandler<ListCollecti
 
     @Override
     public void handle(GrpcServerRequest<ListCollectionsRequest, ListCollectionsResponse> request) {
+        logger.debug("Received list collections request");
         request.handler(req -> collectionService.listCollections()
                 .map(jsonList -> {
                     List<Collection> protos = new ArrayList<>();
@@ -37,6 +38,7 @@ public class ListCollectionsV1Handler extends BaseCollectionHandler<ListCollecti
                 })
                 .onSuccess(resp -> request.response().end(resp))
                 .onFailure(err -> {
+                    logger.error("Failed to list collections", err);
                     if (err instanceof GrpcException) {
                         request.response().status(((GrpcException) err).getStatus()).statusMessage(err.getMessage()).end();
                         return;

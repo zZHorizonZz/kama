@@ -11,7 +11,7 @@ import io.vertx.grpc.server.GrpcServerRequest;
 public class GetCollectionV1Handler extends BaseCollectionHandler<GetCollectionRequest, Collection> {
 
     public static final ServiceMethod<GetCollectionRequest, Collection> SERVICE_METHOD = ServiceMethod.server(
-            ServiceName.create("cloudeko.kama.collection.v1"),
+            ServiceName.create("cloudeko.kama.collection.v1.CollectionService"),
             "GetCollection",
             GrpcMessageEncoder.encoder(),
             GrpcMessageDecoder.decoder(GetCollectionRequest.newBuilder()));

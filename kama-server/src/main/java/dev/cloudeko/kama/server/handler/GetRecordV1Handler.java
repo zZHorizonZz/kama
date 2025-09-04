@@ -11,7 +11,7 @@ import io.vertx.grpc.server.GrpcServerRequest;
 public class GetRecordV1Handler extends BaseRecordHandler<GetRecordRequest, Record> {
 
     public static final ServiceMethod<GetRecordRequest, Record> SERVICE_METHOD = ServiceMethod.server(
-            ServiceName.create("cloudeko.kama.record.v1"),
+            ServiceName.create("cloudeko.kama.record.v1.RecordService"),
             "GetRecord",
             GrpcMessageEncoder.encoder(),
             GrpcMessageDecoder.decoder(GetRecordRequest.newBuilder()));
