@@ -54,6 +54,9 @@
         <module>kama-server</module>
         <module>kama-client</module>
         <module>kama-platform</module>
+        <module>kama-database</module>
+        <module>kama-identity</module>
+        <module>kama-gateway</module>
     </modules>
 
     <profiles>
