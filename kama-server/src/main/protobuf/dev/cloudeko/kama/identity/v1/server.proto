@@ -1,0 +1,179 @@
+syntax = "proto3";
+
+package cloudeko.kama.identity.v1;
+
+import "google/protobuf/empty.proto";
+
+import "dev/cloudeko/kama/identity/v1/resources.proto";
+
+// ----------------------------------------------------------------------------
+// Identity Server API
+// ----------------------------------------------------------------------------
+// This service exposes authentication and user management operations for the
+// Kama platform. It provides CRUD operations for User resources, 
+// authentication, session management, and JWT token operations.
+//
+// Backward-compatibility: only add new optional fields/messages/methods.
+// Do not repurpose tags or change wire types.
+
+option java_multiple_files = true;
+option java_outer_classname = "IdentityServerProto";
+option java_package = "dev.cloudeko.kama.identity.v1";
+option csharp_namespace = "Cloudeko.Kama.Identity.V1";
+option go_package = "cloudeko.dev/go/kama/identity/v1/identityserverpb;identityserverpb";
+option php_namespace = "Cloudeko\\Kama\\Identity\\V1";
+option ruby_package = "Cloudeko::Kama::Identity::V1";
+
+service IdentityServer {
+  // Creates a new user account with email and password.
+  rpc CreateUser(CreateUserRequest) returns (User) {}
+
+  // Authenticates a user with email and password credentials.
+  rpc AuthenticateUser(AuthenticateUserRequest) returns (AuthenticationResponse) {}
+
+  // Retrieves a user by their resource name.
+  rpc GetUser(GetUserRequest) returns (User) {}
+
+  // Updates a user's profile information.
+  rpc UpdateUser(UpdateUserRequest) returns (User) {}
+
+  // Deletes a user account.
+  rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty) {}
+
+  // Lists users with pagination.
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {}
+
+  // Changes a user's password.
+  rpc ChangePassword(ChangePasswordRequest) returns (PasswordChangeResponse) {}
+
+  // Initiates a password reset process.
+  rpc ResetPassword(ResetPasswordRequest) returns (PasswordResetResponse) {}
+
+  // Generates a JWT token for an authenticated user.
+  rpc GenerateToken(GenerateTokenRequest) returns (TokenResponse) {}
+
+  // Validates a JWT token and returns user information.
+  rpc ValidateToken(ValidateTokenRequest) returns (TokenValidationResponse) {}
+}
+
+message CreateUserRequest {
+  // Required. The user's email address.
+  string email = 1;
+
+  // Required. The user's password (plaintext, will be hashed).
+  string password = 2;
+
+  // Optional. The user's display name.
+  string display_name = 3;
+}
+
+message AuthenticateUserRequest {
+  // Required. The user's email address.
+  string email = 1;
+
+  // Required. The user's password.
+  string password = 2;
+}
+
+message AuthenticationResponse {
+  // The authenticated user information.
+  User user = 1;
+
+  // JWT token for the authenticated session.
+  string token = 2;
+
+  // Token expiration time in seconds.
+  int64 expires_in = 3;
+}
+
+message GetUserRequest {
+  // Required. Resource name: users/{user}
+  string name = 1;
+}
+
+message UpdateUserRequest {
+  // Required. The updated user resource. The name identifies the target.
+  User user = 1;
+
+  // Optional field mask for partial updates.
+  string update_mask = 2;
+}
+
+message DeleteUserRequest {
+  // Required. Resource name: users/{user}
+  string name = 1;
+}
+
+message ListUsersRequest {
+  // Optional filter string. Semantics are server-defined.
+  string filter = 1;
+
+  // The maximum number of users to return. Server may enforce limits.
+  int32 page_size = 2;
+
+  // A page token, received from a previous ListUsers call.
+  string page_token = 3;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  string next_page_token = 2;
+}
+
+message ChangePasswordRequest {
+  // Required. Resource name: users/{user}
+  string name = 1;
+
+  // Required. The user's current password.
+  string old_password = 2;
+
+  // Required. The user's new password.
+  string new_password = 3;
+}
+
+message PasswordChangeResponse {
+  // Success message.
+  string message = 1;
+}
+
+message ResetPasswordRequest {
+  // Required. The user's email address.
+  string email = 1;
+}
+
+message PasswordResetResponse {
+  // Password reset token (for development/testing).
+  string reset_token = 1;
+
+  // Success message.
+  string message = 2;
+}
+
+message GenerateTokenRequest {
+  // Required. Resource name: users/{user}
+  string name = 1;
+}
+
+message TokenResponse {
+  // JWT token.
+  string token = 1;
+
+  // Token expiration time in seconds.
+  int64 expires_in = 2;
+}
+
+message ValidateTokenRequest {
+  // Required. JWT token to validate.
+  string token = 1;
+}
+
+message TokenValidationResponse {
+  // Whether the token is valid.
+  bool valid = 1;
+
+  // User ID if token is valid.
+  string user_id = 2;
+
+  // Error message if token is invalid.
+  string error = 3;
+}

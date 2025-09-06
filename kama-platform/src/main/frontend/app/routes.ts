@@ -4,6 +4,7 @@ export default [
   index("routes/home.tsx"),
   layout("routes/layout.tsx", [
     route("/profile", "routes/profile.tsx"),
+    route("/schematic", "routes/schematic.tsx"),
     ...prefix("/collections/", [
       index("routes/collections.tsx"),
       route("/new", "routes/collections.new.tsx"),
@@ -15,6 +16,11 @@ export default [
       route("/:collectionId/records", "routes/records.tsx"),
       route("/:collectionId/records/new", "routes/records.new.tsx"),
       route("/:collectionId/records/:recordId", "routes/record-details.tsx"),
+    ]),
+    ...prefix("/users/", [
+      index("routes/users.tsx"),
+      route("/new", "routes/users.new.tsx"),
+      route("/:userId", "routes/user.detail.tsx"),
     ]),
   ]),
 ] satisfies RouteConfig;

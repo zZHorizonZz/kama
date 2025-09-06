@@ -1,15 +1,23 @@
 package dev.cloudeko.kama.platform;
 
-import dev.cloudeko.kama.server.DatabaseOptions;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import dev.cloudeko.kama.common.DatabaseOptions;
 import dev.cloudeko.kama.server.ServerVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.jackson.DatabindCodec;
 
 public class MainVerticle extends VerticleBase {
 
     public static final String HTTP_PORT = "http.port";
+
+    static {
+        ObjectMapper mapper = DatabindCodec.mapper();
+        mapper.registerModule(new JavaTimeModule());
+    }
 
     @Override
     public Future<?> start() throws Exception {

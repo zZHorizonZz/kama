@@ -1,0 +1,34 @@
+package dev.cloudeko.kama.database;
+
+import dev.cloudeko.kama.database.impl.CollectionServiceImpl;
+import dev.cloudeko.kama.common.DatabaseOptions;
+import io.vertx.codegen.annotations.ProxyGen;
+import io.vertx.codegen.annotations.VertxGen;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+
+import java.util.List;
+
+@VertxGen
+@ProxyGen
+public interface CollectionService {
+
+    static CollectionService create(Vertx vertx, DatabaseOptions options) {
+        return new CollectionServiceImpl(vertx, options);
+    }
+
+    static CollectionService createProxy(Vertx vertx, String address) {
+        return new CollectionServiceVertxEBProxy(vertx, address);
+    }
+
+    Future<JsonObject> createCollection(JsonObject collection);
+
+    Future<JsonObject> updateCollection(JsonObject collection);
+
+    Future<Void> deleteCollection(String collection);
+
+    Future<JsonObject> getCollection(String collection);
+
+    Future<List<JsonObject>> listCollections();
+}

@@ -1,5 +1,6 @@
 import { CollectionService } from "~/client/dev/cloudeko/kama/collection/v1/server_pb";
 import { RecordService } from "~/client/dev/cloudeko/kama/record/v1/server_pb";
+import { IdentityServer } from "~/client/dev/cloudeko/kama/identity/v1/server_pb";
 
 import { type Client as ConnectClient, createClient, type Interceptor, type Transport } from "@connectrpc/connect";
 import { createGrpcWebTransport } from "@connectrpc/connect-web";
@@ -8,9 +9,11 @@ interface Client {
   getCollectionService(): ConnectClient<typeof CollectionService>;
 
   getRecordService(): ConnectClient<typeof RecordService>;
+
+  getIdentityService(): ConnectClient<typeof IdentityServer>;
 }
 
-// Utility function to decode JWT token payload
+// Utility function to decodeCollection JWT token payload
 /*function decodeJWT(token: string): any {
     try {
         const base64Url = token.split('.')[1];
@@ -124,11 +127,13 @@ class ClientImpl implements Client {
 
   private readonly collectionService: ConnectClient<typeof CollectionService>;
   private readonly recordService: ConnectClient<typeof RecordService>;
+  private readonly identityService: ConnectClient<typeof IdentityServer>;
 
   constructor(hostname: string) {
     this.transport = createGrpcWebTransport({ baseUrl: hostname, interceptors: [authorization] });
     this.collectionService = createClient(CollectionService, this.transport);
     this.recordService = createClient(RecordService, this.transport);
+    this.identityService = createClient(IdentityServer, this.transport);
   }
 
   getCollectionService(): ConnectClient<typeof CollectionService> {
@@ -137,6 +142,10 @@ class ClientImpl implements Client {
 
   getRecordService(): ConnectClient<typeof RecordService> {
     return this.recordService;
+  }
+
+  getIdentityService(): ConnectClient<typeof IdentityServer> {
+    return this.identityService;
   }
 }
 

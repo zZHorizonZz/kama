@@ -1,15 +1,28 @@
 package dev.cloudeko.kama.server;
 
-import dev.cloudeko.kama.server.impl.CollectionServiceImpl;
-import dev.cloudeko.kama.server.impl.RecordServiceImpl;
-import io.vertx.core.*;
+import dev.cloudeko.kama.common.DatabaseOptions;
+import dev.cloudeko.kama.common.MigrationVerticle;
+import dev.cloudeko.kama.database.CollectionService;
+import dev.cloudeko.kama.database.DatabaseVerticle;
+import dev.cloudeko.kama.database.RecordService;
+import dev.cloudeko.kama.identity.IdentityVerticle;
+import dev.cloudeko.kama.identity.UserService;
+import dev.cloudeko.kama.server.impl.GrpcCollectionServiceImpl;
+import dev.cloudeko.kama.server.impl.GrpcRecordServiceImpl;
+import dev.cloudeko.kama.server.impl.GrpcIdentityServiceImpl;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Future;
+import io.vertx.core.VerticleBase;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.grpc.server.GrpcServer;
 import io.vertx.grpc.server.GrpcServerOptions;
+import org.jboss.logging.Logger;
 
 public class ServerVerticle extends VerticleBase {
+
+    private static final Logger logger = Logger.getLogger(ServerVerticle.class);
 
     private HttpServer httpServer;
     private GrpcServer grpcServer;
@@ -26,8 +39,11 @@ public class ServerVerticle extends VerticleBase {
                 .setConfig(new JsonObject().put("database", dbOptions.toJson()));
 
         // Deploy migration verticle first
-        return vertx.deployVerticle(new MigrationVerticle(), databaseOptions).compose(migrationResult -> {
-            // Start gRPC server after migrations complete
+        return Future.all(
+                vertx.deployVerticle(new MigrationVerticle(), databaseOptions),
+                vertx.deployVerticle(DatabaseVerticle.class, databaseOptions),
+                vertx.deployVerticle(IdentityVerticle.class, databaseOptions)
+        ).compose(migrationResult -> {
             return startGrpcServer(host, port, dbOptions);
         });
     }
@@ -44,13 +60,19 @@ public class ServerVerticle extends VerticleBase {
         // Create the gRPC server
         grpcServer = GrpcServer.server(vertx, grpcOptions);
 
+        CollectionService collectionServiceProxy = CollectionService.createProxy(vertx, "dev.cloudeko.kama.database.CollectionService");
+        RecordService recordServiceProxy = RecordService.createProxy(vertx, "dev.cloudeko.kama.database.RecordService");
+        UserService userServiceProxy = UserService.createProxy(vertx, "dev.cloudeko.kama.identity.UserService");
+
         // Create service implementations
-        CollectionServiceImpl collectionService = new CollectionServiceImpl(vertx, dbOptions);
-        RecordServiceImpl recordService = new RecordServiceImpl(vertx, dbOptions);
+        GrpcCollectionServiceImpl collectionService = new GrpcCollectionServiceImpl(collectionServiceProxy);
+        GrpcRecordServiceImpl recordService = new GrpcRecordServiceImpl(recordServiceProxy);
+        GrpcIdentityServiceImpl identityService = new GrpcIdentityServiceImpl(userServiceProxy);
 
         // Register services with gRPC server
         collectionService.bind(grpcServer);
         recordService.bind(grpcServer);
+        identityService.bind(grpcServer);
 
         // Create HTTP server
         httpServer = vertx.createHttpServer(httpOptions);
@@ -76,14 +98,13 @@ public class ServerVerticle extends VerticleBase {
         // Start the HTTP server
         return httpServer.listen()
                 .onSuccess(server -> {
-                    System.out.println("gRPC server started on " + host + ":" + port);
-                    System.out.println("Available services:");
-                    System.out.println("  - cloudeko.kama.collection.v1.CollectionService");
-                    System.out.println("  - cloudeko.kama.record.v1.RecordService");
+                    logger.infov("HTTP server started on {0}:{1,number,#}", host, port);
+                    logger.infov("Available services:");
+                    logger.infov("  - cloudeko.kama.collection.v1.CollectionService");
+                    logger.infov("  - cloudeko.kama.record.v1.RecordService");
+                    logger.infov("  - cloudeko.kama.identity.v1.IdentityServer");
                 })
-                .onFailure(cause -> {
-                    System.err.println("Failed to start gRPC server: " + cause.getMessage());
-                })
+                .onFailure(cause -> logger.errorv(cause, "Failed to start gRPC server"))
                 .mapEmpty();
     }
 
@@ -91,10 +112,8 @@ public class ServerVerticle extends VerticleBase {
     public Future<?> stop() throws Exception {
         Future<Void> httpFuture = httpServer != null ? httpServer.close() : Future.succeededFuture();
 
-        return httpFuture.onSuccess(result -> {
-            System.out.println("Server stopped successfully");
-        }).onFailure(cause -> {
-            System.err.println("Failed to stop server: " + cause.getMessage());
-        });
+        return httpFuture
+                .onSuccess(_ -> logger.infov("HTTP server stopped successfully"))
+                .onFailure(cause -> logger.errorv(cause, "Failed to stop HTTP server"));
     }
 }

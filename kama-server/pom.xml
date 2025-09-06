@@ -17,6 +17,16 @@
             <artifactId>kama-commons</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>dev.cloudeko</groupId>
+            <artifactId>kama-identity</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.cloudeko</groupId>
+            <artifactId>kama-database</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Vert.x -->
         <dependency>

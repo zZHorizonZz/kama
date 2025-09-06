@@ -18,22 +18,22 @@ export default function Layout() {
             <Link to="/" className="absolute top-0 left-0 h-16 content-center font-semibold text-xl">
               Kama
             </Link>
-            {isConnected && (
-              <div className="h-fit">
-                <Link to="/schematic">
-                  <MdPrimaryTab>Schematic</MdPrimaryTab>
-                </Link>
-                <Link to="/collections">
-                  <MdPrimaryTab active>Collections</MdPrimaryTab>
-                </Link>
-                <Link to="/identity">
-                  <MdPrimaryTab>Identity</MdPrimaryTab>
-                </Link>
-                <Link to="/gateway">
-                  <MdPrimaryTab>Gateway</MdPrimaryTab>
-                </Link>
-              </div>
-            )}
+            <div className="h-fit">
+              <Link to="/schematic">
+                <MdPrimaryTab active={isActive("/schematic")}>Schematic</MdPrimaryTab>
+              </Link>
+              <Link to="/collections">
+                <MdPrimaryTab active={isActive("/collections")}>
+                    Collections
+                </MdPrimaryTab>
+              </Link>
+              <Link to="/users">
+                <MdPrimaryTab active={isActive("/users")}>Users</MdPrimaryTab>
+              </Link>
+              <Link to="/gateway">
+                <MdPrimaryTab active={isActive("/gateway")}>Gateway</MdPrimaryTab>
+              </Link>
+            </div>
             <div className="absolute top-0 right-0 flex h-16 items-center space-x-4">
               <Link to="/profile">
                 <div className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-md-sys-color-primary to-md-sys-color-secondary">

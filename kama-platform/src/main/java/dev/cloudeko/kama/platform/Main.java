@@ -5,8 +5,12 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
+import org.jboss.logging.Logger;
 
 public class Main {
+
+    private static final Logger logger = Logger.getLogger(Main.class);
+
     public static void main(String[] args) {
         // Configure Vert.x
         VertxOptions vertxOptions = new VertxOptions()
@@ -31,26 +35,25 @@ public class Main {
                 .setConfig(config)
                 .setInstances(1);
 
-        System.out.println("Starting Kama Server...");
-        System.out.println("Configuration:");
-        System.out.println("  Host: " + config.getString("host"));
-        System.out.println("  Port: " + config.getInteger("port"));
-        System.out.println("  Database URL: " + config.getJsonObject("database").getString("url"));
+        logger.infov("Starting Kama Server...");
+        logger.infov("Configuration:");
+        logger.infov("  Host: {0}", config.getString("host"));
+        logger.infov("  Port: {0}", config.getInteger("port"));
+        logger.infov("  Database URL: {0}", config.getJsonObject("database").getString("url"));
 
         // Deploy the server verticle
         vertx.deployVerticle(new ServerVerticle(), deploymentOptions).onComplete(result -> {
             if (result.succeeded()) {
-                System.out.println("Kama Server started successfully!");
-                System.out.println("Deployment ID: " + result.result());
+                logger.infov("Kama Server started successfully!");
+                logger.infov("Deployment ID: {0}", result.result());
 
                 // Add shutdown hook
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                    System.out.println("Shutting down Kama Server...");
+                    logger.infov("Shutting down Kama Server...");
                     vertx.close();
                 }));
             } else {
-                System.err.println("Failed to start Kama Server: " + result.cause().getMessage());
-                result.cause().printStackTrace();
+                logger.errorv(result.cause(), "Failed to start Kama Server");
                 vertx.close();
                 System.exit(1);
             }
